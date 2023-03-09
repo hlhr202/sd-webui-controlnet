@@ -81,8 +81,17 @@ def midas(img, res=512, a=np.pi * 2.0, **kwargs):
     if model_midas is None:
         from annotator.midas import apply_midas
         model_midas = apply_midas
-    results, _ = model_midas(img, a)
+    results, _, _ = model_midas(img, a)
     return results, True
+
+def midas_depth(img, res=512, a=np.pi * 2.0, **kwargs):
+    img = resize_image(HWC3(img), res)
+    global model_midas
+    if model_midas is None:
+        from annotator.midas import apply_midas
+        model_midas = apply_midas
+    results, _, depth = model_midas(img, a)
+    return results, True, depth
 
 def midas_normal(img, res=512, a=np.pi * 2.0, thr_a=0.4, **kwargs): # bg_th -> thr_a
     bg_th = thr_a

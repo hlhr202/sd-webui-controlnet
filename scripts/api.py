@@ -7,6 +7,7 @@ import copy
 import contextlib
 import pydantic
 import sys
+import cv2
 
 import gradio as gr
 
@@ -19,6 +20,7 @@ import modules.scripts as scripts
 
 from scripts import external_code
 from scripts.processor import *
+from scripts.controlembedding import midas_embeddings
 
 def to_base64_nparray(encoding: str):
     return np.array(api.decode_base64_to_image(encoding)).astype('uint8')
@@ -103,6 +105,14 @@ class ApiHijack(api.Api):
         super().__init__(*args, **kwargs)
         self.add_api_route("/controlnet/txt2img", self.controlnet_txt2img, methods=["POST"], response_model=TextToImageResponse)
         self.add_api_route("/controlnet/img2img", self.controlnet_img2img, methods=["POST"], response_model=ImageToImageResponse)
+        self.add_api_route("/controlnet/embeddings", self.embedding, methods=["POST"], response_model=ControlEmbeddingsResponse)
+
+    class ControlEmbeddingsRequest(BaseModel):
+        data: str
+
+    def embedding(self, img_request: ControlEmbeddingsRequest):
+        l = midas_embeddings(img_request.data)
+        return {"data": l}
 
     def controlnet_txt2img(self, txt2img_request: ControlNetTxt2ImgRequest):
         return self.controlnet_any2img(
