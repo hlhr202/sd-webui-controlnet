@@ -748,8 +748,15 @@ class Script(scripts.Script):
             elif input_image is not None:
                 input_image = HWC3(np.asarray(input_image))
             elif image is not None:
-                input_image = HWC3(image['image'])
-                if not ((image['mask'][:, :, 0]==0).all() or (image['mask'][:, :, 0]==255).all()):
+                # Need to check the image for API compatibility
+                if isinstance(image['image'], str):
+                    from modules.api.api import decode_base64_to_image
+                    input_image = HWC3(np.asarray(decode_base64_to_image(image['image'])))
+                else:
+                    input_image = HWC3(image['image'])
+
+                # Adding 'mask' check for API compatibility
+                if 'mask' in image and not ((image['mask'][:, :, 0]==0).all() or (image['mask'][:, :, 0]==255).all()):
                     print("using mask as input")
                     input_image = HWC3(image['mask'][:, :, 0])
                     scribble_mode = True
@@ -807,7 +814,7 @@ class Script(scripts.Script):
             
         self.latest_network = UnetHook(lowvram=hook_lowvram)    
         self.latest_network.hook(unet)
-        self.latest_network.notify(forward_params, p.sampler_name in ["DDIM", "PLMS"])
+        self.latest_network.notify(forward_params, p.sampler_name in ["DDIM", "PLMS", "UniPC"])
         self.detected_map = detected_maps
             
         if len(control_groups) > 0 and shared.opts.data.get("control_net_skip_img2img_processing") and hasattr(p, "init_images"):
@@ -825,11 +832,11 @@ class Script(scripts.Script):
                     save_image(img, detectmap_dir, module)
 
         is_img2img_batch_tab = is_ui and is_img2img and img2img_tab_tracker.submit_img2img_tab == 'img2img_batch_tab'
-        no_detectmap_opt = shared.opts.data.get("control_net_no_detectmap", False)
-        if self.latest_network is None or no_detectmap_opt or is_img2img_batch_tab:
+        if self.latest_network is None or is_img2img_batch_tab:
             return
 
-        if hasattr(self, "detected_map") and self.detected_map is not None:
+        no_detectmap_opt = shared.opts.data.get("control_net_no_detectmap", False)
+        if not no_detectmap_opt and hasattr(self, "detected_map") and self.detected_map is not None:
             for detect_map, module in self.detected_map:
                 if detect_map is None:
                     continue
