@@ -100,15 +100,18 @@ def create_controlnet_request_model(p_api_class):
 ControlNetTxt2ImgRequest = create_controlnet_request_model(StableDiffusionTxt2ImgProcessingAPI)
 ControlNetImg2ImgRequest = create_controlnet_request_model(StableDiffusionImg2ImgProcessingAPI)
 
+class ControlEmbeddingsResponse(BaseModel):
+        data: List[List[float]]
+
+class ControlEmbeddingsRequest(BaseModel):
+        data: str
+
 class ApiHijack(api.Api):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_api_route("/controlnet/txt2img", self.controlnet_txt2img, methods=["POST"], response_model=TextToImageResponse)
         self.add_api_route("/controlnet/img2img", self.controlnet_img2img, methods=["POST"], response_model=ImageToImageResponse)
         self.add_api_route("/controlnet/embeddings", self.embedding, methods=["POST"], response_model=ControlEmbeddingsResponse)
-
-    class ControlEmbeddingsRequest(BaseModel):
-        data: str
 
     def embedding(self, img_request: ControlEmbeddingsRequest):
         l = midas_embeddings(img_request.data)
